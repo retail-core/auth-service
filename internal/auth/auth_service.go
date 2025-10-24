@@ -2,6 +2,7 @@ package auth
 
 import (
 	"context"
+	"database/sql"
 	"errors"
 	"fmt"
 	"time"
@@ -26,11 +27,13 @@ func NewService(jwtSecret string, repo user.Repository) Service {
 
 func (s *service) Register(ctx context.Context, username, email, password, role, tenantID string) (string, error) {
 	existing, err := s.repo.GetByEmail(ctx, email)
-	if err != nil {
-		return "", fmt.Errorf("db error: %w", err)
+
+	if err != nil && !errors.Is(err, sql.ErrNoRows) {
+		return "", err
 	}
+
 	if existing != nil {
-		return "", errors.New("user already exists")
+		return "", common.ErrUserAlreadyExists
 	}
 
 	hashedPassword, err := HashPassword(password)
@@ -59,7 +62,7 @@ func (s *service) Register(ctx context.Context, username, email, password, role,
 	}
 
 	// TODO: send OTP via notification service RabbitMQ
-	logger.L().Info("OTP generated for user registration", zap.String("email", email), zap.String("otp", otp))
+	logger.L().Info("OTP generated", zap.String("email", email), zap.String("otp", otp))
 	return "User created successfully", nil
 }
 
@@ -104,6 +107,34 @@ func (s *service) Verify(ctx context.Context, email, otp string) error {
 	if err := s.repo.VerifyUser(ctx, email); err != nil {
 		return fmt.Errorf("failed to verify user: %w", err)
 	}
+	return nil
+}
+
+func (s *service) ResendOTP(ctx context.Context, email string) error {
+	user, err := s.repo.GetByEmail(ctx, email)
+	if err != nil {
+		return common.ErrInternal
+	}
+
+	if user == nil {
+		return common.ErrNotFound
+	}
+
+	if user.IsVerified {
+		return common.ErrUserAlreadyVerified
+	}
+
+	otp, expiry, err := GenerateOTP()
+
+	if err != nil {
+		return common.ErrInternal
+	}
+
+	if err := s.repo.UpdateOtp(ctx, email, otp, expiry); err != nil {
+		return common.ErrInternal
+	}
+	// TODO: send OTP via notification service RabbitMQ
+	logger.L().Info("OTP generated", zap.String("email", email), zap.String("otp", otp))
 	return nil
 }
 

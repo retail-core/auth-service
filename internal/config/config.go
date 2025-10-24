@@ -2,16 +2,18 @@ package config
 
 import (
     "os"
+    "github.com/joho/godotenv"
 )
 
 type Config struct {
-    PORT         string
+    PORT         string 
     DB_SOURCE    string
     JWT_SECRET_KEY string
     MODE         string
 }
 
 func LoadConfig() Config {
+    godotenv.Load()
     return Config{
         PORT:         getEnv("PORT", "8080"),
         DB_SOURCE:     getEnv("DB_SOURCE", "postgres://postgres:postgres@localhost:5432/auth_db?sslmode=disable"),

@@ -9,7 +9,7 @@ type RegisterRequest struct {
 }
 
 type RegisterResponse struct {
-	UserID string `json:"user_id"`
+	Message string `json:"message"`
 }
 
 type LoginRequest struct {
@@ -28,5 +28,13 @@ type VerifyRequest struct {
 }
 
 type VerifyResponse struct {
+	Success bool `json:"success"`
+}
+
+type ResendOTPRequest struct {
+	Email string `json:"email" validate:"required,email"`
+}
+
+type ResendOTPResponse struct {
 	Success bool `json:"success"`
 }

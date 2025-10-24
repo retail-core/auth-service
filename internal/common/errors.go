@@ -26,7 +26,7 @@ func NewAppError(code, message string, status int) *AppError {
 
 var (
 	ErrNotFound           = NewAppError("NOT_FOUND", "Resource not found", http.StatusNotFound)
-	ErrUserAlreadyExists  = NewAppError("USER_ALREADY_EXISTS", "User already exists", http.StatusBadRequest)
+	ErrUserAlreadyExists  = NewAppError("USER_ALREADY_EXISTS", "User already exists", http.StatusConflict)
 	ErrInvalidLoginCredentials = NewAppError("INVALID_CREDENTIALS", "Invalid email or password", http.StatusUnauthorized)
 	ErrInvalidVerificationCredential         = NewAppError("INVALID_VERIFICATION_CREDENTIAL", "Invalid verification credential", http.StatusBadRequest)
 	ErrUnauthorized       = NewAppError("UNAUTHORIZED", "Unauthorized access", http.StatusUnauthorized)
@@ -34,6 +34,7 @@ var (
 	ErrValidation		 = NewAppError("VALIDATION_ERROR", "Validation failed", http.StatusUnprocessableEntity)
 	ErrBadRequest		 = NewAppError("BAD_REQUEST", "Bad request", http.StatusBadRequest)
 	ErrUserNotVerified   = NewAppError("USER_NOT_VERIFIED", "User email/phone not verified", http.StatusForbidden)
+	ErrUserAlreadyVerified = NewAppError("USER_ALREADY_VERIFIED", "User is already verified", http.StatusConflict)
 )
 
 func IsAppError(err error) (*AppError, bool) {

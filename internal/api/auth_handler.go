@@ -30,13 +30,13 @@ func (h *AuthHandler) Register(w http.ResponseWriter, r *http.Request) {
         return
     }
 
-    userId, err := h.service.Register(r.Context(), req.Username, req.Email, req.Password, req.Role, req.TenantID)
+    msg, err := h.service.Register(r.Context(), req.Username, req.Email, req.Password, req.Role, req.TenantID)
     if err != nil {
-        WriteError(w, common.ErrInternal)
+        WriteError(w, err)
         return
     }
 
-	res := RegisterResponse{UserID: userId}
+	res := RegisterResponse{Message: msg}
 	WriteJson(w, http.StatusCreated, res)
 }
 
@@ -85,3 +85,24 @@ func(h *AuthHandler) Verify (w http.ResponseWriter, r *http.Request) {
 	WriteJson(w, http.StatusOK, res)
 }
 
+func (h *AuthHandler) ResendOTP(w http.ResponseWriter, r *http.Request) {
+	var req ResendOTPRequest
+
+	if err := json.NewDecoder(r.Body).Decode(&req); err != nil {
+		WriteError(w, common.ErrBadRequest)
+		return
+	}
+
+	if err := common.ValidateStruct(req); err != nil {
+		WriteError(w, err)
+		return
+	}
+
+	if err := h.service.ResendOTP(r.Context(), req.Email); err != nil {
+		WriteError(w, err)
+		return
+	}
+
+	res := ResendOTPResponse{Success: true}
+	WriteJson(w, http.StatusOK, res)
+}

@@ -31,7 +31,7 @@ func NewRouter() http.Handler {
 			auth.Post("/login", authHandler.Login)
 			auth.Post("/register", authHandler.Register)
 			auth.Post("/verify-email", authHandler.Verify)
-			// auth.Post("/logout", authHandler.Logout)
+			auth.Post("/resend-otp", authHandler.ResendOTP)
 		})
 	})
 
