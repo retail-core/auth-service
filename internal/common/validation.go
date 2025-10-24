@@ -37,7 +37,7 @@ func ValidateStruct(s interface{}) *AppError {
 	return &AppError{
 		Code:    "VALIDATION_ERROR",
 		Message: "Invalid request parameters",
-		Status:  http.StatusBadRequest,
+		Status:  http.StatusUnprocessableEntity,
 		Details: errorsMap,
 	}
 }

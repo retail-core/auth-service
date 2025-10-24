@@ -33,6 +33,7 @@ var (
 	ErrInternal           = NewAppError("INTERNAL_ERROR", "Something went wrong", http.StatusInternalServerError)
 	ErrValidation		 = NewAppError("VALIDATION_ERROR", "Validation failed", http.StatusUnprocessableEntity)
 	ErrBadRequest		 = NewAppError("BAD_REQUEST", "Bad request", http.StatusBadRequest)
+	ErrUserNotVerified   = NewAppError("USER_NOT_VERIFIED", "User email/phone not verified", http.StatusForbidden)
 )
 
 func IsAppError(err error) (*AppError, bool) {

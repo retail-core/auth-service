@@ -7,6 +7,7 @@ import (
 	"github.com/retail-core/auth-service/internal/config"
 	"github.com/retail-core/auth-service/internal/db"
 	"github.com/retail-core/auth-service/internal/user"
+	"github.com/retail-core/auth-service/internal/middleware"
 )
 
 func NewRouter() http.Handler {
@@ -18,6 +19,8 @@ func NewRouter() http.Handler {
 
 	authService := auth.NewService(cfg.JWT_SECRET_KEY, userRepo)
 	authHandler := NewAuthHandler(authService)
+
+	router.Use(middleware.RequestLogger)
 
 	router.Get("/health-check", func(w http.ResponseWriter, r *http.Request) {
 		w.Write([]byte("Ok"))
@@ -31,7 +34,6 @@ func NewRouter() http.Handler {
 			// auth.Post("/logout", authHandler.Logout)
 		})
 	})
-
 
 	return router
 }

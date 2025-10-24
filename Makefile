@@ -3,7 +3,6 @@ DB_URL=postgres://postgres:postgres@localhost:5432/auth_db?sslmode=disable
 
 # Run API
 run:
-	@echo "🚀 Starting Auth API..."
 	@go run cmd/server/main.go
 
 # Run SQLC generation

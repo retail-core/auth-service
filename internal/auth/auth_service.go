@@ -5,7 +5,11 @@ import (
 	"errors"
 	"fmt"
 	"time"
+
+	"github.com/retail-core/auth-service/internal/common"
+	"github.com/retail-core/auth-service/internal/logger"
 	"github.com/retail-core/auth-service/internal/user"
+	"go.uber.org/zap"
 )
 
 type service struct {
@@ -35,10 +39,10 @@ func (s *service) Register(ctx context.Context, username, email, password, role,
 	}
 
 	user := &user.User{
-		Username:     username,
-		Email:        email,
+		Username: username,
+		Email:    email,
 		Password: hashedPassword,
-		Role:         role,
+		Role:     role,
 	}
 
 	if err := s.repo.Create(ctx, user); err != nil {
@@ -55,7 +59,7 @@ func (s *service) Register(ctx context.Context, username, email, password, role,
 	}
 
 	// TODO: send OTP via notification service RabbitMQ
-	fmt.Println("otp for user generated:", otp)
+	logger.L().Info("OTP generated for user registration", zap.String("email", email), zap.String("otp", otp))
 	return "User created successfully", nil
 }
 
@@ -65,16 +69,20 @@ func (s *service) Login(ctx context.Context, email, password string) (string, er
 		return "", fmt.Errorf("db error: %w", err)
 	}
 	if user == nil {
-		return "", fmt.Errorf("invalid email or password: %w", err)
+		return "", common.ErrInvalidLoginCredentials
+	}
+
+	if !user.IsVerified {
+		return "", common.ErrUserNotVerified
 	}
 
 	if err := CheckPassword(user.Password, password); err != nil {
-		return "", errors.New("invalid email or password")
+		return "", common.ErrInvalidLoginCredentials
 	}
 
 	token, err := GenerateJWT(user.ID, user.Role, user.TenantID, s.secretKey)
 	if err != nil {
-		return "", fmt.Errorf("failed to generate token: %w", err)
+		return "", common.ErrInternal
 	}
 	return token, nil
 }
@@ -86,7 +94,7 @@ func (s *service) Verify(ctx context.Context, email, otp string) error {
 	}
 
 	if user == nil {
-		return errors.New("invalid email or OTP")
+		return common.ErrInvalidVerificationCredential
 	}
 
 	if err := verifyOtp(user, otp); err != nil {
@@ -99,12 +107,10 @@ func (s *service) Verify(ctx context.Context, email, otp string) error {
 	return nil
 }
 
-func verifyOtp(user *user.User, otp string) error {
-	if user.OtpCode != nil && *user.OtpCode != otp {
-		return errors.New("invalid email or OTP")
-	}
-	if user.OtpExpiresAt != nil && user.OtpExpiresAt.Before(time.Now()) {
-		return errors.New("invalid OTP code")
+func verifyOtp(u *user.User, otp string) error {
+	now := time.Now()
+	if (u.OtpCode != nil && *u.OtpCode != otp) || (u.OtpExpiresAt != nil && u.OtpExpiresAt.Before(now)) {
+		return common.ErrInvalidVerificationCredential
 	}
 	return nil
 }

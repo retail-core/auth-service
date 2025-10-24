@@ -55,14 +55,13 @@ func (h *AuthHandler) Login(w http.ResponseWriter, r *http.Request) {
 
 	token, err := h.service.Login(r.Context(), req.Email, req.Password)
 	if err != nil {
-		WriteError(w, common.ErrInvalidLoginCredentials)
+		WriteError(w, err)
 		return
 	}
 
 	res := LoginResponse{AccessToken: token, RefreshToken: "refresh_token"}
 	WriteJson(w, http.StatusOK, res)
 }
-
 
 func(h *AuthHandler) Verify (w http.ResponseWriter, r *http.Request) {
 	var req VerifyRequest
@@ -85,3 +84,4 @@ func(h *AuthHandler) Verify (w http.ResponseWriter, r *http.Request) {
 	res := VerifyResponse{Success: true}
 	WriteJson(w, http.StatusOK, res)
 }
+
