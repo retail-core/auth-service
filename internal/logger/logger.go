@@ -6,14 +6,17 @@ import (
 
 var log *zap.Logger
 
-// Init initializes the global logger (called once at startup)
 func Init(mode string) {
 	var err error
-	if mode == "production" {
+	switch mode {
+	case "production":
 		log, err = zap.NewProduction()
-	} else {
+	case "testing":
+		log = zap.NewNop()
+	default:
 		log, err = zap.NewDevelopment()
 	}
+
 	if err != nil {
 		panic(err)
 	}

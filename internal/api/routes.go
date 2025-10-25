@@ -22,8 +22,8 @@ func NewRouter() http.Handler {
 
 	router.Use(middleware.RequestLogger)
 
-	router.Get("/health-check", func(w http.ResponseWriter, r *http.Request) {
-		w.Write([]byte("Ok"))
+	router.Get("/ping", func(w http.ResponseWriter, r *http.Request) {
+		w.Write([]byte("pong"))
 	})
 
 	router.Route("/v1", func(v1 chi.Router) {
