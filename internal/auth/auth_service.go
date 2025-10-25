@@ -66,28 +66,39 @@ func (s *service) Register(ctx context.Context, username, email, password, role,
 	return "User created successfully", nil
 }
 
-func (s *service) Login(ctx context.Context, email, password string) (string, error) {
-	user, err := s.repo.GetByEmail(ctx, email)
+func (s *service) Login(ctx context.Context, email, password string) (string, string, user.User, error) {
+	dbUser, err := s.repo.GetByEmail(ctx, email)
 	if err != nil {
-		return "", fmt.Errorf("db error: %w", err)
+		return "", "", user.User{}, fmt.Errorf("db error: %w", err)
 	}
-	if user == nil {
-		return "", common.ErrInvalidLoginCredentials
-	}
-
-	if !user.IsVerified {
-		return "", common.ErrUserNotVerified
+	if dbUser == nil {
+		return "", "", user.User{}, common.ErrInvalidLoginCredentials
 	}
 
-	if err := CheckPassword(user.Password, password); err != nil {
-		return "", common.ErrInvalidLoginCredentials
+	if !dbUser.IsVerified {
+		return "", "", user.User{}, common.ErrUserNotVerified
 	}
 
-	token, err := GenerateJWT(user.ID, user.Role, user.TenantID, s.secretKey)
+	if err := CheckPassword(dbUser.Password, password); err != nil {
+		return "", "", user.User{}, common.ErrInvalidLoginCredentials
+	}
+
+	token, err := GenerateJWT(dbUser.ID, dbUser.Role, dbUser.TenantID, dbUser.IsVerified, s.secretKey)
 	if err != nil {
-		return "", common.ErrInternal
+		return "", "", user.User{}, common.ErrInternal
 	}
-	return token, nil
+
+	rt, expiresAt, err := GenerateRefreshToken(dbUser.ID, s.secretKey)
+	if err != nil {
+		return "", "", user.User{}, err
+	}
+
+	err = s.repo.CreateRefreshToken(ctx, rt, dbUser.ID, expiresAt)
+	if err != nil {
+		return "", "", user.User{}, err
+	}
+
+	return token, rt, *dbUser, nil
 }
 
 func (s *service) Verify(ctx context.Context, email, otp string) error {
@@ -136,6 +147,35 @@ func (s *service) ResendOTP(ctx context.Context, email string) error {
 	// TODO: send OTP via notification service RabbitMQ
 	logger.L().Info("OTP generated", zap.String("email", email), zap.String("otp", otp))
 	return nil
+}
+
+func (s *service) GenerateTokens(ctx context.Context, refreshToken string) (string, string, error) {
+	rt, err := s.repo.GetRefreshToken(ctx, refreshToken)
+	if err != nil {
+		return "", "", err
+	}
+
+	if rt.ExpiresAt.Before(time.Now()) {
+		return "", "", common.ErrResourceExpired
+	}
+
+	user, err := s.repo.GetByID(ctx, rt.UserID)
+	if err != nil {
+		return "", "", err
+	}
+
+	// Generate new access and refresh tokens
+	newAccessToken, err := GenerateJWT(user.ID, user.Role, user.TenantID, user.IsVerified, s.secretKey)
+	if err != nil {
+		return "", "", err
+	}
+
+	newRefreshToken, _, err := GenerateRefreshToken(user.ID, s.secretKey)
+	if err != nil {
+		return "", "", err
+	}
+
+	return newAccessToken, newRefreshToken, nil
 }
 
 func verifyOtp(u *user.User, otp string) error {

@@ -4,3 +4,16 @@ VALUES ($1, $2, $3, $4, $5);
 
 -- name: GetUserByEmail :one
 SELECT * FROM users WHERE email = $1 LIMIT 1;
+
+-- name: GetUserByID :one
+SELECT * FROM users WHERE id = $1 LIMIT 1;
+
+-- name: CreateRefreshToken :exec
+INSERT INTO refresh_tokens (user_id, token, expires_at)
+VALUES ($1, $2, $3);
+
+-- name: GetRefreshToken :one
+SELECT * FROM refresh_tokens WHERE token = $1 LIMIT 1;
+
+-- name: DeleteRefreshToken :exec
+DELETE FROM refresh_tokens WHERE token = $1;

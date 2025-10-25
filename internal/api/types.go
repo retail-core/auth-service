@@ -20,6 +20,14 @@ type LoginRequest struct {
 type LoginResponse struct {
 	AccessToken  string `json:"access_token"`
 	RefreshToken string `json:"refresh_token"`
+	User         LUser  `json:"user"`
+}
+
+type LUser struct {
+	ID       string `json:"id"`
+	Username string `json:"username"`
+	Email    string `json:"email"`
+	Role     string `json:"role"`
 }
 
 type VerifyRequest struct {
@@ -37,4 +45,13 @@ type ResendOTPRequest struct {
 
 type ResendOTPResponse struct {
 	Success bool `json:"success"`
+}
+
+type RefreshTokenRequest struct {
+	RefreshToken string `json:"refresh_token" validate:"required"`
+}
+
+type RefreshTokenResponse struct {
+	AccessToken  string `json:"access_token"`
+	RefreshToken string `json:"refresh_token"`
 }

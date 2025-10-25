@@ -11,8 +11,11 @@ import (
 type Repository interface {
 	Create(ctx context.Context, user *User) error
 	GetByEmail(ctx context.Context, email string) (*User, error)
+	GetByID(ctx context.Context, userID uuid.UUID) (*User, error)
 	UpdateOtp(ctx context.Context, userID string, otpCode string, otpExpiresAt time.Time) error
 	VerifyUser(ctx context.Context, email string) error
+	GetRefreshToken(ctx context.Context, token string) (RefreshToken, error)
+	CreateRefreshToken(ctx context.Context, refreshToken, userID string, expiresAt time.Time) error
 }
 
 
@@ -70,6 +73,29 @@ func (r *pgRepository) GetByEmail(ctx context.Context, email string) (*User, err
 	}, nil
 }
 
+func (r *pgRepository) GetByID(ctx context.Context, userID uuid.UUID) (*User, error) {
+	dbUser, err := r.q.GetUserByID(ctx, userID)
+	if err != nil {
+		return nil, err
+	}
+
+	var tenantID *string
+	if dbUser.TenantID.Valid {
+		s := dbUser.TenantID.UUID.String()
+		tenantID = &s
+	}
+
+	return &User{
+		ID:          dbUser.ID.String(),
+		Email:       dbUser.Email,
+		Password:    dbUser.Password,
+		Role:        dbUser.Role,
+		TenantID:    tenantID,
+		OtpCode: 	 &dbUser.OtpCode.String,
+		OtpExpiresAt: &dbUser.OtpExpiresAt.Time,
+		IsVerified:  dbUser.IsVerified,
+	}, nil
+}
 
 func (r *pgRepository) UpdateOtp(ctx context.Context, email string, otpCode string, otpExpiresAt time.Time) error {
 	query := `
@@ -90,3 +116,25 @@ func (r *pgRepository) VerifyUser(ctx context.Context, email string) error {
 	_, err := r.db.ExecContext(ctx, query, email)
 	return err
 }
+
+func (r *pgRepository) CreateRefreshToken(ctx context.Context, refreshToken, userID string, expiresAt time.Time) error {
+	err := r.q.CreateRefreshToken(ctx, db.CreateRefreshTokenParams{
+		Token:     refreshToken,
+		UserID:    uuid.MustParse(userID),
+		ExpiresAt: expiresAt,
+	})
+	return err
+}
+
+func (r *pgRepository) GetRefreshToken(ctx context.Context, token string) (RefreshToken, error) {
+	dbToken, err := r.q.GetRefreshToken(ctx, token)
+	if err != nil {
+		return RefreshToken{}, err
+	}
+	return RefreshToken{
+		Token:     dbToken.Token,
+		UserID:    dbToken.UserID,
+		ExpiresAt: dbToken.ExpiresAt,
+	}, nil
+}
+

@@ -46,20 +46,25 @@ func (h *AuthHandler) Login(w http.ResponseWriter, r *http.Request) {
 	if err := json.NewDecoder(r.Body).Decode(&req); err != nil {
 		WriteError(w, common.ErrBadRequest)
 		return
-	}
+	}	
 
 	if err := common.ValidateStruct(req); err != nil {
 		WriteError(w, err)
 		return
 	}
 
-	token, err := h.service.Login(r.Context(), req.Email, req.Password)
+	token, rToken, user, err := h.service.Login(r.Context(), req.Email, req.Password)
 	if err != nil {
 		WriteError(w, err)
 		return
 	}
 
-	res := LoginResponse{AccessToken: token, RefreshToken: "refresh_token"}
+	res := LoginResponse{AccessToken: token, RefreshToken: rToken, User: LUser{
+		ID:       user.ID,
+		Username: user.Username,
+		Email:    user.Email,
+		Role:     user.Role,
+	}}
 	WriteJson(w, http.StatusOK, res)
 }
 
@@ -104,5 +109,30 @@ func (h *AuthHandler) ResendOTP(w http.ResponseWriter, r *http.Request) {
 	}
 
 	res := ResendOTPResponse{Success: true}
+	WriteJson(w, http.StatusOK, res)
+}
+
+func (h *AuthHandler) RefreshToken(w http.ResponseWriter, r *http.Request) {
+	var req RefreshTokenRequest
+	if err := json.NewDecoder(r.Body).Decode(&req); err != nil {
+		WriteError(w, common.ErrBadRequest)
+		return
+	}
+
+	if err := common.ValidateStruct(req); err != nil {
+		WriteError(w, err)
+		return
+	}
+
+	newAccessToken, newRefreshToken, err := h.service.GenerateTokens(r.Context(), req.RefreshToken)
+	if err != nil {
+		WriteError(w, err)
+		return
+	}
+
+	res := RefreshTokenResponse{
+		AccessToken:  newAccessToken,
+		RefreshToken: newRefreshToken,
+	}
 	WriteJson(w, http.StatusOK, res)
 }
