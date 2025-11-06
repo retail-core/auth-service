@@ -10,6 +10,7 @@ type Config struct {
     DB_SOURCE    string
     JWT_SECRET_KEY string
     MODE         string
+    RABBITMQ_URL string
 }
 
 func LoadConfig() Config {
@@ -19,6 +20,7 @@ func LoadConfig() Config {
         DB_SOURCE:     getEnv("DB_SOURCE", "postgres://postgres:postgres@localhost:5432/auth_db?sslmode=disable"),
         JWT_SECRET_KEY: getEnv("JWT_SECRET_KEY", "dXAGHVVprhsHaT10d+sdoMbxAa3i4+viSfSSBbKo3pDX0fHUQuc6NfyaSZt+oCxYY7OjpyVb2X+SCY1izcQ8aQQ=="),
         MODE:  getEnv("ENVIRONMENT", "development"),
+        RABBITMQ_URL: getEnv("RABBITMQ_URL", "amqp://guest:guest@localhost:5672/"),
     }
 }
 

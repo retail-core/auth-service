@@ -70,6 +70,7 @@ func (r *pgRepository) GetByEmail(ctx context.Context, email string) (*User, err
 		OtpCode: 	 &dbUser.OtpCode.String,
 		OtpExpiresAt: &dbUser.OtpExpiresAt.Time,
 		IsVerified:  dbUser.IsVerified,
+		Username:    dbUser.Username,
 	}, nil
 }
 

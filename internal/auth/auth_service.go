@@ -9,6 +9,7 @@ import (
 
 	"github.com/retail-core/auth-service/internal/common"
 	"github.com/retail-core/auth-service/internal/logger"
+	"github.com/retail-core/auth-service/internal/queue"
 	"github.com/retail-core/auth-service/internal/user"
 	"go.uber.org/zap"
 )
@@ -16,12 +17,14 @@ import (
 type service struct {
 	repo      user.Repository
 	secretKey string
+	publisher queue.Publisher
 }
 
-func NewService(jwtSecret string, repo user.Repository) Service {
+func NewService(jwtSecret string, repo user.Repository, publisher queue.Publisher) Service {
 	return &service{
 		secretKey: jwtSecret,
 		repo:      repo,
+		publisher: publisher,
 	}
 }
 
@@ -61,7 +64,22 @@ func (s *service) Register(ctx context.Context, username, email, password, role,
 		return "", fmt.Errorf("failed to save OTP: %w", err)
 	}
 
-	// TODO: send OTP via notification service RabbitMQ
+	notification := map[string]any{
+		"channel":  "email",
+		"to":       email,
+		"template": "otp-email",
+		"data": map[string]any{
+			"otp":      otp,
+			"username": username,
+			"email":    email,
+		},
+	}
+
+	ctx = context.Background()
+	if err := s.publisher.PublishNotification(ctx, "email", notification); err != nil {
+		logger.L().Error("Failed to publish notification", zap.Error(err))
+	}
+
 	logger.L().Info("OTP generated", zap.String("email", email), zap.String("otp", otp))
 	return "User created successfully", nil
 }
@@ -118,6 +136,19 @@ func (s *service) Verify(ctx context.Context, email, otp string) error {
 	if err := s.repo.VerifyUser(ctx, email); err != nil {
 		return fmt.Errorf("failed to verify user: %w", err)
 	}
+
+	event := map[string]any{
+		"ownerId":   user.ID,
+		"ownerName": user.Username,
+	}
+
+	if user.Role == "business_owner" {
+		err = s.publisher.PublishDomainEvent(ctx, "business_owner.created", event)
+		if err != nil {
+			return fmt.Errorf("failed to publish domain event: %w", err)
+		}
+	}
+
 	return nil
 }
 
