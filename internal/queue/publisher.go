@@ -3,6 +3,7 @@ package queue
 import (
 	"context"
 	"encoding/json"
+	"time"
 
 	amqp "github.com/rabbitmq/amqp091-go"
 	"github.com/retail-core/auth-service/internal/logger"
@@ -15,10 +16,24 @@ type Publisher struct {
 
 // NewPublisher sets up the RabbitMQ connection and channel once at startup.
 func NewPublisher(rabbitURL string) *Publisher {
-	conn, err := amqp.Dial(rabbitURL)
-	if err != nil {
-		logger.L().Error("Failed to connect to RabbitMQ: %v", zap.Error(err))
+	var conn *amqp.Connection
+	var err error
+
+	for i := 0; i <= 10; i++ {
+		conn, err = amqp.Dial(rabbitURL)
+
+		if err == nil {
+			break
+		}
+		
+		logger.L().Error("Failed to connect to RabbitMQ, retrying...", zap.Int("attempt", i+1), zap.Error(err))
+		time.Sleep(3 * time.Second)
 	}
+
+    if err != nil {
+		logger.L().Fatal("Could not connect to RabbitMQ after several attempts", zap.Error(err))
+	}
+
 	ch, err := conn.Channel()
 	if err != nil {
 		logger.L().Error("Failed to open RabbitMQ channel: %v", zap.Error(err))
@@ -36,8 +51,8 @@ func (p *Publisher) PublishNotification(ctx context.Context, routingKey string, 
 
 	return p.ch.PublishWithContext(
 		ctx,
-		"notifications",               // exchange (use default direct)
-		routingKey,  // queue name
+		"notifications", // exchange (use default direct)
+		routingKey,      // queue name
 		false,
 		false,
 		amqp.Publishing{

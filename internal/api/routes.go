@@ -13,7 +13,7 @@ import (
 )
 
 func NewRouter() http.Handler {
-	cfg := config.LoadConfig()
+	cfg := config.LoadConfig() // remove this guy later already in main
 	router := chi.NewRouter()
 
 	db, query := db.Connect(cfg.DB_SOURCE)
@@ -31,8 +31,8 @@ func NewRouter() http.Handler {
 		w.Write([]byte("pong"))
 	})
 
-	router.Route("/v1", func(v1 chi.Router) {
-		v1.Route("/auth", func(auth chi.Router) {
+	router.Route("/auth", func(v1 chi.Router) {
+		v1.Route("/v1", func(auth chi.Router) {
 			auth.Post("/login", authHandler.Login)
 			auth.Post("/register", authHandler.Register)
 			auth.Post("/verify-email", authHandler.Verify)
