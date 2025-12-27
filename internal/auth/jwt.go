@@ -14,6 +14,7 @@ func GenerateJWT(userID, role string, tenantID *string, isVerified bool, secret 
         "role": role,
         "exp":  time.Now().Add(jwtTTL).Unix(),
         "is_verified": isVerified,
+        "iss": "auth-issuer",
     }
 
     if tenantID != nil {
@@ -25,7 +26,7 @@ func GenerateJWT(userID, role string, tenantID *string, isVerified bool, secret 
 }
 
 func GenerateRefreshToken(userID, secret string) (string, time.Time, error) {
-    expiresAt := time.Now().Add(7 * 24 * time.Hour)
+    expiresAt := time.Now().Add(30 * 24 * time.Hour)
     claims := jwt.MapClaims{
         "sub": userID,
         "exp": expiresAt.Unix(),

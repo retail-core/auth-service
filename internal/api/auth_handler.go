@@ -3,8 +3,10 @@ package api
 import (
 	"encoding/json"
 	"net/http"
+
 	"github.com/retail-core/auth-service/internal/auth"
 	"github.com/retail-core/auth-service/internal/common"
+	"github.com/retail-core/auth-service/internal/dtos"
 )
 
 type AuthHandler struct {
@@ -18,35 +20,35 @@ func NewAuthHandler(s auth.Service) *AuthHandler {
 }
 
 func (h *AuthHandler) Register(w http.ResponseWriter, r *http.Request) {
-	var req RegisterRequest
-
-    if err := json.NewDecoder(r.Body).Decode(&req); err != nil {
-		WriteError(w, common.ErrBadRequest)
-        return
-    }
-
-    if err := common.ValidateStruct(req); err != nil {
-        WriteError(w, err)
-        return
-    }
-
-    msg, err := h.service.Register(r.Context(), req.Username, req.Email, req.Password, req.Role, req.TenantID)
-    if err != nil {
-        WriteError(w, err)
-        return
-    }
-
-	res := RegisterResponse{Message: msg}
-	WriteJson(w, http.StatusCreated, res)
-}
-
-func (h *AuthHandler) Login(w http.ResponseWriter, r *http.Request) {
-	var req LoginRequest
+	var req dtos.RegisterRequest
 
 	if err := json.NewDecoder(r.Body).Decode(&req); err != nil {
 		WriteError(w, common.ErrBadRequest)
 		return
-	}	
+	}
+
+	if err := common.ValidateStruct(req); err != nil {
+		WriteError(w, err)
+		return
+	}
+
+	msg, err := h.service.Register(r.Context(), req)
+	if err != nil {
+		WriteError(w, err)
+		return
+	}
+
+	res := dtos.RegisterResponse{Message: msg}
+	WriteJson(w, http.StatusCreated, res)
+}
+
+func (h *AuthHandler) Login(w http.ResponseWriter, r *http.Request) {
+	var req dtos.LoginRequest
+
+	if err := json.NewDecoder(r.Body).Decode(&req); err != nil {
+		WriteError(w, common.ErrBadRequest)
+		return
+	}
 
 	if err := common.ValidateStruct(req); err != nil {
 		WriteError(w, err)
@@ -59,7 +61,7 @@ func (h *AuthHandler) Login(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
-	res := LoginResponse{AccessToken: token, RefreshToken: rToken, User: LUser{
+	res := dtos.LoginResponse{AccessToken: token, RefreshToken: rToken, User: dtos.LUser{
 		ID:       user.ID,
 		Username: user.Username,
 		Email:    user.Email,
@@ -68,9 +70,9 @@ func (h *AuthHandler) Login(w http.ResponseWriter, r *http.Request) {
 	WriteJson(w, http.StatusOK, res)
 }
 
-func(h *AuthHandler) Verify (w http.ResponseWriter, r *http.Request) {
-	var req VerifyRequest
-	
+func (h *AuthHandler) Verify(w http.ResponseWriter, r *http.Request) {
+	var req dtos.VerifyRequest
+
 	if err := json.NewDecoder(r.Body).Decode(&req); err != nil {
 		WriteError(w, common.ErrBadRequest)
 		return
@@ -81,17 +83,17 @@ func(h *AuthHandler) Verify (w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
-	if err := h.service.Verify(r.Context(), req.Email, req.OTP);  err != nil {
+	if err := h.service.Verify(r.Context(), req.Email, req.OTP); err != nil {
 		WriteError(w, common.ErrInvalidVerificationCredential)
 		return
 	}
 
-	res := VerifyResponse{Success: true}
+	res := dtos.VerifyResponse{Success: true}
 	WriteJson(w, http.StatusOK, res)
 }
 
 func (h *AuthHandler) ResendOTP(w http.ResponseWriter, r *http.Request) {
-	var req ResendOTPRequest
+	var req dtos.ResendOTPRequest
 
 	if err := json.NewDecoder(r.Body).Decode(&req); err != nil {
 		WriteError(w, common.ErrBadRequest)
@@ -108,12 +110,12 @@ func (h *AuthHandler) ResendOTP(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
-	res := ResendOTPResponse{Success: true}
+	res := dtos.ResendOTPResponse{Success: true}
 	WriteJson(w, http.StatusOK, res)
 }
 
 func (h *AuthHandler) RefreshToken(w http.ResponseWriter, r *http.Request) {
-	var req RefreshTokenRequest
+	var req dtos.RefreshTokenRequest
 	if err := json.NewDecoder(r.Body).Decode(&req); err != nil {
 		WriteError(w, common.ErrBadRequest)
 		return
@@ -130,9 +132,31 @@ func (h *AuthHandler) RefreshToken(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
-	res := RefreshTokenResponse{
+	res := dtos.RefreshTokenResponse{
 		AccessToken:  newAccessToken,
 		RefreshToken: newRefreshToken,
 	}
+	WriteJson(w, http.StatusOK, res)
+}
+
+func (h *AuthHandler) ResetPassword(w http.ResponseWriter, r *http.Request) {
+	var req dtos.ResetPasswordRequest
+
+	if err := json.NewDecoder(r.Body).Decode(&req); err != nil {
+		WriteError(w, common.ErrBadRequest)
+		return
+	}
+
+	if err := common.ValidateStruct(req); err != nil {
+		WriteError(w, err)
+		return
+	}
+
+	if err := h.service.ResetPassword(r.Context(), req.Email, req.NewPassword); err != nil {
+		WriteError(w, err)
+		return
+	}
+
+	res := map[string]string{"message": "Password reset successful"}
 	WriteJson(w, http.StatusOK, res)
 }

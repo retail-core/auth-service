@@ -2,10 +2,12 @@
 FROM golang:1.25.3-alpine AS builder
 WORKDIR /app
 COPY . .
-RUN go mod download
+
+# ENV GOPROXY=https://proxy.golang.org,direct
+
+RUN go mod download -x
 RUN go build -o auth-service ./cmd/server
 
-# Install migrate CLI tool
 RUN apk add --no-cache curl
 RUN curl -L https://github.com/golang-migrate/migrate/releases/download/v4.17.0/migrate.linux-amd64.tar.gz | tar xvz -C /usr/local/bin
 

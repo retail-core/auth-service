@@ -31,15 +31,13 @@ func NewRouter() http.Handler {
 		w.Write([]byte("pong"))
 	})
 
-	router.Route("/auth", func(v1 chi.Router) {
-		v1.Route("/v1", func(auth chi.Router) {
-			auth.Post("/login", authHandler.Login)
-			auth.Post("/register", authHandler.Register)
-			auth.Post("/verify-email", authHandler.Verify)
-			auth.Post("/resend-otp", authHandler.ResendOTP)
-			auth.Post("/refresh", authHandler.RefreshToken)
-		})
+	router.Route("/v1", func(v1 chi.Router) {
+		v1.Post("/login", authHandler.Login)
+		v1.Post("/register", authHandler.Register)
+		v1.Post("/verify-email", authHandler.Verify)
+		v1.Post("/resend-otp", authHandler.ResendOTP)
+		v1.Post("/refresh", authHandler.RefreshToken)
+		v1.Post("/reset-password", authHandler.ResetPassword)
 	})
-
 	return router
-}
+} // and the name

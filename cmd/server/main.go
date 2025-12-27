@@ -20,7 +20,7 @@ func main() {
 	logger := logger.L()
 
 	logger.Info("Auth service starting on Port", zap.String("port", cfg.PORT))
-	err := http.ListenAndServe(":"+cfg.PORT, router)
+	err := http.ListenAndServe("0.0.0.0:"+cfg.PORT, router)
 	if err != nil {
 		log.Fatal("Server failed to start:", err)
 	}

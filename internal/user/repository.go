@@ -4,23 +4,26 @@ import (
 	"context"
 	"database/sql"
 	"time"
-	"github.com/retail-core/auth-service/internal/db/generated"
+
 	"github.com/google/uuid"
+	"github.com/retail-core/auth-service/internal/common"
+	"github.com/retail-core/auth-service/internal/db/generated"
 )
 
 type Repository interface {
-	Create(ctx context.Context, user *User) error
+	// return user model and error
+	Create(ctx context.Context, user *User) (uuid.UUID, error)
 	GetByEmail(ctx context.Context, email string) (*User, error)
 	GetByID(ctx context.Context, userID uuid.UUID) (*User, error)
 	UpdateOtp(ctx context.Context, userID string, otpCode string, otpExpiresAt time.Time) error
 	VerifyUser(ctx context.Context, email string) error
+	UpdatePassword(ctx context.Context, userID string, hashedPassword string) error
 	GetRefreshToken(ctx context.Context, token string) (RefreshToken, error)
 	CreateRefreshToken(ctx context.Context, refreshToken, userID string, expiresAt time.Time) error
 }
 
-
 type pgRepository struct {
-	q *db.Queries
+	q  *db.Queries
 	db *sql.DB
 }
 
@@ -28,7 +31,31 @@ func NewPGRepository(q *db.Queries, db *sql.DB) Repository {
 	return &pgRepository{q: q, db: db}
 }
 
-func (r *pgRepository) Create(ctx context.Context, u *User) error {
+func (r *pgRepository) UpdatePassword(ctx context.Context, userID string, hashedPassword string) error {
+	query := `
+		UPDATE users
+		SET password = $1
+		WHERE id = $2
+	`
+
+	result, err := r.db.ExecContext(ctx, query, hashedPassword, userID)
+	if err != nil {
+		return err
+	}
+
+	rows, err := result.RowsAffected()
+	if err != nil {
+		return err
+	}
+
+	if rows == 0 {
+		return common.ErrNotFound
+	}
+
+	return nil
+}
+
+func (r *pgRepository) Create(ctx context.Context, u *User) (uuid.UUID, error) {
 	var tenant uuid.NullUUID
 	if u.TenantID != nil && *u.TenantID != "" {
 		parsed, err := uuid.Parse(*u.TenantID)
@@ -37,13 +64,15 @@ func (r *pgRepository) Create(ctx context.Context, u *User) error {
 		}
 	}
 
-	return r.q.CreateUser(ctx, db.CreateUserParams{
+	id, err := r.q.CreateUser(ctx, db.CreateUserParams{
 		Username: u.Username,
 		Email:    u.Email,
 		Password: u.Password,
 		Role:     u.Role,
 		TenantID: tenant,
 	})
+
+	return id, err
 }
 
 func (r *pgRepository) GetByEmail(ctx context.Context, email string) (*User, error) {
@@ -62,15 +91,15 @@ func (r *pgRepository) GetByEmail(ctx context.Context, email string) (*User, err
 	}
 
 	return &User{
-		ID:          dbUser.ID.String(),
-		Email:       dbUser.Email,
-		Password:    dbUser.Password,
-		Role:        dbUser.Role,
-		TenantID:    tenantID,
-		OtpCode: 	 &dbUser.OtpCode.String,
+		ID:           dbUser.ID.String(),
+		Email:        dbUser.Email,
+		Password:     dbUser.Password,
+		Role:         dbUser.Role,
+		TenantID:     tenantID,
+		OtpCode:      &dbUser.OtpCode.String,
 		OtpExpiresAt: &dbUser.OtpExpiresAt.Time,
-		IsVerified:  dbUser.IsVerified,
-		Username:    dbUser.Username,
+		IsVerified:   dbUser.IsVerified,
+		Username:     dbUser.Username,
 	}, nil
 }
 
@@ -87,14 +116,14 @@ func (r *pgRepository) GetByID(ctx context.Context, userID uuid.UUID) (*User, er
 	}
 
 	return &User{
-		ID:          dbUser.ID.String(),
-		Email:       dbUser.Email,
-		Password:    dbUser.Password,
-		Role:        dbUser.Role,
-		TenantID:    tenantID,
-		OtpCode: 	 &dbUser.OtpCode.String,
+		ID:           dbUser.ID.String(),
+		Email:        dbUser.Email,
+		Password:     dbUser.Password,
+		Role:         dbUser.Role,
+		TenantID:     tenantID,
+		OtpCode:      &dbUser.OtpCode.String,
 		OtpExpiresAt: &dbUser.OtpExpiresAt.Time,
-		IsVerified:  dbUser.IsVerified,
+		IsVerified:   dbUser.IsVerified,
 	}, nil
 }
 
@@ -138,4 +167,3 @@ func (r *pgRepository) GetRefreshToken(ctx context.Context, token string) (Refre
 		ExpiresAt: dbToken.ExpiresAt,
 	}, nil
 }
-

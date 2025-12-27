@@ -28,9 +28,10 @@ func (q *Queries) CreateRefreshToken(ctx context.Context, arg CreateRefreshToken
 	return err
 }
 
-const createUser = `-- name: CreateUser :exec
+const createUser = `-- name: CreateUser :one
 INSERT INTO users (email, username, password, role, tenant_id)
 VALUES ($1, $2, $3, $4, $5)
+RETURNING id
 `
 
 type CreateUserParams struct {
@@ -41,15 +42,17 @@ type CreateUserParams struct {
 	TenantID uuid.NullUUID
 }
 
-func (q *Queries) CreateUser(ctx context.Context, arg CreateUserParams) error {
-	_, err := q.db.ExecContext(ctx, createUser,
+func (q *Queries) CreateUser(ctx context.Context, arg CreateUserParams) (uuid.UUID, error) {
+	row := q.db.QueryRowContext(ctx, createUser,
 		arg.Email,
 		arg.Username,
 		arg.Password,
 		arg.Role,
 		arg.TenantID,
 	)
-	return err
+	var id uuid.UUID
+	err := row.Scan(&id)
+	return id, err
 }
 
 const deleteRefreshToken = `-- name: DeleteRefreshToken :exec
