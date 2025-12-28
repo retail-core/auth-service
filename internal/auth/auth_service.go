@@ -276,6 +276,17 @@ func (s *service) ResetPassword(ctx context.Context, email, newPassword string) 
 	return nil
 }
 
+func (s *service) DeleteUser(ctx context.Context, userID string) error {
+	err := s.repo.DeleteUser(ctx, userID)
+
+	if err != nil {
+		logger.L().Error("Failed to delete user", zap.String("userID", userID), zap.Error(err))
+		return fmt.Errorf("failed to delete user: %w", err)
+	}
+
+	return nil
+}
+
 func (s *service) __publishSendOtpEvent(email string, username string, role string, otp string, storeName *string) error {
 
 	var template string = "otp-email"

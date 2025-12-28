@@ -81,3 +81,7 @@ type ResetPasswordRequest struct {
 	Email       string `json:"email" validate:"required,email"`
 	NewPassword string `json:"new_password" validate:"required,min=8"`
 }
+
+type StaffDeletedEvent struct {
+	UserID  string `json:"user_id"`
+}

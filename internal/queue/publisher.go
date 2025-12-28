@@ -11,7 +11,7 @@ import (
 )
 
 type Publisher struct {
-	ch *amqp.Channel
+	Ch *amqp.Channel
 }
 
 // NewPublisher sets up the RabbitMQ connection and channel once at startup.
@@ -39,7 +39,7 @@ func NewPublisher(rabbitURL string) *Publisher {
 		logger.L().Error("Failed to open RabbitMQ channel: %v", zap.Error(err))
 	}
 	logger.L().Info("✅ RabbitMQ publisher connected.")
-	return &Publisher{ch: ch}
+	return &Publisher{Ch: ch}
 }
 
 // PublishNotification sends a JSON payload to the notifications queue.
@@ -49,7 +49,7 @@ func (p *Publisher) PublishNotification(ctx context.Context, routingKey string, 
 		return err
 	}
 
-	return p.ch.PublishWithContext(
+	return p.Ch	.PublishWithContext(
 		ctx,
 		"notifications", // exchange (use default direct)
 		routingKey,      // queue name
@@ -68,7 +68,7 @@ func (p *Publisher) PublishDomainEvent(ctx context.Context, routingKey string, p
 		return err
 	}
 
-	return p.ch.PublishWithContext(
+	return p.Ch.PublishWithContext(
 		ctx,
 		"domain.events", // ✅ publish to your domain exchange
 		routingKey,      // e.g. "business_owner.created"
@@ -82,7 +82,7 @@ func (p *Publisher) PublishDomainEvent(ctx context.Context, routingKey string, p
 }
 
 func (p *Publisher) SetupDomainExchange() error {
-	return p.ch.ExchangeDeclare(
+	return p.Ch.ExchangeDeclare(
 		"domain.events", // exchange name
 		"topic",         // type (allows pattern routing)
 		true,            // durable

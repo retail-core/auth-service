@@ -20,6 +20,7 @@ type Repository interface {
 	UpdatePassword(ctx context.Context, userID string, hashedPassword string) error
 	GetRefreshToken(ctx context.Context, token string) (RefreshToken, error)
 	CreateRefreshToken(ctx context.Context, refreshToken, userID string, expiresAt time.Time) error
+	DeleteUser(ctx context.Context, userID string) error
 }
 
 type pgRepository struct {
@@ -166,4 +167,35 @@ func (r *pgRepository) GetRefreshToken(ctx context.Context, token string) (Refre
 		UserID:    dbToken.UserID,
 		ExpiresAt: dbToken.ExpiresAt,
 	}, nil
+}
+
+func (r *pgRepository) DeleteUser(ctx context.Context, userID string) error {
+	tx, err := r.db.BeginTx(ctx, nil)
+	if err != nil {
+		return err
+	}
+	defer tx.Rollback()
+
+	_, err = tx.ExecContext(ctx,
+		`DELETE FROM refresh_tokens WHERE user_id = $1`,
+		userID,
+	)
+	if err != nil {
+		return err
+	}
+
+	_, err = tx.ExecContext(ctx,
+		`DELETE FROM users WHERE id = $1`,
+		userID,
+	)
+
+	if err != nil {
+		return err
+	}
+
+	if err := tx.Commit(); err != nil {
+		return err
+	}
+
+	return nil
 }
