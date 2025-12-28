@@ -26,6 +26,7 @@ type RegisterRequest struct {
 	StaffRole *string `json:"staff_role,omitempty" validate:"omitempty"` // remote one of
 	AdminID   *uuid.UUID `json:"admin_id,omitempty"`                     // for staff created by admin
 	StoreID   *uuid.UUID `json:"store_id,omitempty"`                     // for staff created by business owner
+	StoreName *string   `json:"store_name,omitempty"`                   // for business owner
 }
 
 type RegisterResponse struct {
