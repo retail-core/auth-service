@@ -68,7 +68,11 @@ func (s *service) Register(ctx context.Context, req dtos.RegisterRequest) (strin
 		return "", fmt.Errorf("failed to save OTP: %w", err)
 	}
 
-	s.__publishSendOtpEvent(req.Email, req.Username, req.Role,  otp, req.StoreName)
+	if req.Role == string(dtos.RoleBusinessOwner) {
+		s.__publishSendOtpEvent(req.Email, req.Username, otp)
+	} else {
+		s.__publishSendInvitationEmailEvent(req.Email, req.Username, otp, req.StoreName)
+	}
 
 	if req.Role == string(dtos.RoleStaff) {
 		event := map[string]any{
@@ -115,7 +119,7 @@ func (s *service) Login(ctx context.Context, email, password string) (string, st
 			}
 
 		}
-		s.__publishSendOtpEvent(dbUser.Email, dbUser.Username, otp, dbUser.Role, nil)
+		s.__publishSendOtpEvent(dbUser.Email, dbUser.Username, otp)
 		return "", "", user.User{}, common.ErrUserNotVerified
 	}
 
@@ -287,35 +291,46 @@ func (s *service) DeleteUser(ctx context.Context, userID string) error {
 	return nil
 }
 
-func (s *service) __publishSendOtpEvent(email string, username string, role string, otp string, storeName *string) error {
-
-	var template string = "otp-email"
-	var roleStr string =  string(dtos.RoleBusinessOwner)
-	var tempPwd string = ""
+func (s *service) __publishSendInvitationEmailEvent(email string, username string, otp string, storeName *string) error {
 	var store string = ""
 
 	if storeName != nil {
 		store = *storeName
 	}
 
-	if role == string(dtos.RoleStaff) {
-		template = "staff-invitation"
-		roleStr = string(dtos.RoleStaff)
-		tempPwd = "Mypwd@1234"
-
+	notification := map[string]any{
+		"channel":  "email",
+		"to":       email,
+		"template": "staff-invitation",
+		"data": map[string]any{
+			"otp":                otp,
+			"username":           username,
+			"email":              email,
+			"role":               "staff",
+			"temporary_password": "Mypwd@1234",
+			"store_name":         store,
+		},
 	}
+
+	ctx := context.Background()
+	if err := s.publisher.PublishNotification(ctx, "email", notification); err != nil {
+		logger.L().Error("Failed to publish notification", zap.Error(err))
+		return err
+	}
+
+	return nil
+}
+
+func (s *service) __publishSendOtpEvent(email, username, otp string) error {
 
 	notification := map[string]any{
 		"channel":  "email",
 		"to":       email,
-		"template":   template,
+		"template": "otp-email",
 		"data": map[string]any{
 			"otp":      otp,
 			"username": username,
 			"email":    email,
-			"role":     roleStr,
-			"temporary_password":  tempPwd,
-			"store_name":    store,
 		},
 	}
 
