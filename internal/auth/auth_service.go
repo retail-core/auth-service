@@ -217,7 +217,8 @@ func (s *service) ResendOTP(ctx context.Context, email string) error {
 	if err := s.repo.UpdateOtp(ctx, email, otp, expiry); err != nil {
 		return common.ErrInternal
 	}
-	// TODO: send OTP via notification service RabbitMQ
+
+	s.__publishSendOtpEvent(user.Email, user.Username, otp)
 	logger.L().Info("OTP generated", zap.String("email", email), zap.String("otp", otp))
 	return nil
 }
