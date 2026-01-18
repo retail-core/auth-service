@@ -244,7 +244,12 @@ func (s *service) GenerateTokens(ctx context.Context, refreshToken string) (stri
 		return "", "", err
 	}
 
-	newRefreshToken, _, err := GenerateRefreshToken(user.ID, s.secretKey)
+	newRefreshToken, expiresAt, err := GenerateRefreshToken(user.ID, s.secretKey)
+	if err != nil {
+		return "", "", err
+	}
+
+	err = s.repo.CreateRefreshToken(ctx, newRefreshToken, user.ID, expiresAt)
 	if err != nil {
 		return "", "", err
 	}

@@ -6,7 +6,7 @@ import (
     "github.com/golang-jwt/jwt/v5"
 )
 
-var jwtTTL = 24 * time.Hour // token expires in 1 day
+var jwtTTL = 7 * 24 * time.Hour // token expires in 7 days
 
 func GenerateJWT(userID, role string, tenantID *string, isVerified bool, secret string) (string, error) {
     claims := jwt.MapClaims{

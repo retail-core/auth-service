@@ -162,6 +162,12 @@ func (r *pgRepository) GetRefreshToken(ctx context.Context, token string) (Refre
 	if err != nil {
 		return RefreshToken{}, err
 	}
+
+	// check if error is sql.ErrNoRows
+	if err == sql.ErrNoRows {
+		return RefreshToken{}, common.ErrNotFound
+	}
+	
 	return RefreshToken{
 		Token:     dbToken.Token,
 		UserID:    dbToken.UserID,
