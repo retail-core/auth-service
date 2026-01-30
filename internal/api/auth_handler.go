@@ -32,6 +32,8 @@ func (h *AuthHandler) Register(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
+	req.Sanitize() // make email lowercase and trim spaces
+
 	msg, err := h.service.Register(r.Context(), req)
 	if err != nil {
 		WriteError(w, err)
@@ -54,6 +56,8 @@ func (h *AuthHandler) Login(w http.ResponseWriter, r *http.Request) {
 		WriteError(w, err)
 		return
 	}
+
+	req.Sanitize() // make email lowercase and trim spaces
 
 	token, rToken, user, err := h.service.Login(r.Context(), req.Email, req.Password)
 	if err != nil {
@@ -83,6 +87,8 @@ func (h *AuthHandler) Verify(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
+	req.Sanitize() // make email lowercase and trim spaces
+
 	if err := h.service.Verify(r.Context(), req.Email, req.OTP); err != nil {
 		WriteError(w, common.ErrInvalidVerificationCredential)
 		return
@@ -105,6 +111,8 @@ func (h *AuthHandler) ResendOTP(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
+	req.Sanitize() // make email lowercase and trim spaces
+
 	if err := h.service.ResendOTP(r.Context(), req.Email); err != nil {
 		WriteError(w, err)
 		return
@@ -116,6 +124,7 @@ func (h *AuthHandler) ResendOTP(w http.ResponseWriter, r *http.Request) {
 
 func (h *AuthHandler) RefreshToken(w http.ResponseWriter, r *http.Request) {
 	var req dtos.RefreshTokenRequest
+
 	if err := json.NewDecoder(r.Body).Decode(&req); err != nil {
 		WriteError(w, common.ErrBadRequest)
 		return
@@ -146,6 +155,8 @@ func (h *AuthHandler) ResetPassword(w http.ResponseWriter, r *http.Request) {
 		WriteError(w, common.ErrBadRequest)
 		return
 	}
+
+	req.Sanitize() // make email lowercase and trim spaces
 
 	if err := common.ValidateStruct(req); err != nil {
 		WriteError(w, err)

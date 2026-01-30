@@ -1,6 +1,10 @@
 package dtos
 
-import "github.com/google/uuid"
+import (
+	"strings"
+
+	"github.com/google/uuid"
+)
 
 const (
 	BusinessCreatedRoutingKey = "business_owner.created"
@@ -84,4 +88,24 @@ type ResetPasswordRequest struct {
 
 type StaffDeletedEvent struct {
 	UserID  string `json:"user_id"`
+}
+
+func (r *RegisterRequest) Sanitize() {
+    r.Email = strings.ToLower(strings.TrimSpace(r.Email))
+}
+
+func (l *LoginRequest) Sanitize() {
+    l.Email = strings.ToLower(strings.TrimSpace(l.Email))
+}
+
+func (l *VerifyRequest) Sanitize() {
+    l.Email = strings.ToLower(strings.TrimSpace(l.Email))
+}
+
+func (l *ResendOTPRequest) Sanitize() {
+    l.Email = strings.ToLower(strings.TrimSpace(l.Email))
+}
+
+func (l *ResetPasswordRequest) Sanitize() {
+    l.Email = strings.ToLower(strings.TrimSpace(l.Email))
 }
