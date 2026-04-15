@@ -71,6 +71,27 @@ func (h *AuthHandler) Login(w http.ResponseWriter, r *http.Request) {
 		Email:    user.Email,
 		Role:     user.Role,
 	}}
+
+	http.SetCookie(w, &http.Cookie{
+    Name:     "access_token",
+    Value:    res.AccessToken,
+    Path:     "/",
+    HttpOnly: true,
+    Secure:   false, // true in production (HTTPS)
+    SameSite: http.SameSiteLaxMode,
+    MaxAge:   604800, // 1 hour
+})
+
+http.SetCookie(w, &http.Cookie{
+    Name:     "refresh_token",
+    Value:    res.RefreshToken,
+    Path:     "/",
+    HttpOnly: true,
+    Secure:   false,
+    SameSite: http.SameSiteLaxMode,
+    MaxAge:   30 * 24 * 3600,
+})
+
 	WriteJson(w, http.StatusOK, res)
 }
 

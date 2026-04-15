@@ -3,9 +3,10 @@ FROM golang:1.25.3-alpine AS builder
 WORKDIR /app
 COPY . .
 
-# ENV GOPROXY=https://proxy.golang.org,direct
+ENV GOPROXY=https://proxy.golang.org,direct
 
 RUN go mod download -x
+# RUN GOPROXY=https://goproxy.io,direct go mod download -x
 RUN go build -o auth-service ./cmd/server
 
 RUN apk add --no-cache curl
