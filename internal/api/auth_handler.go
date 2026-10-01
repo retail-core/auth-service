@@ -111,7 +111,7 @@ func (h *AuthHandler) Verify(w http.ResponseWriter, r *http.Request) {
 	req.Sanitize() // make email lowercase and trim spaces
 
 	if err := h.service.Verify(r.Context(), req.Email, req.OTP); err != nil {
-		WriteError(w, common.ErrInvalidVerificationCredential)
+		WriteError(w, err)
 		return
 	}
 
