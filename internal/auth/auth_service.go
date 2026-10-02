@@ -155,6 +155,8 @@ func (s *service) Verify(ctx context.Context, email, otp string) error {
 		return common.ErrInvalidVerificationCredential
 	}
 
+	alreadyExistingUser := user.IsVerified
+
 	if err := verifyOtp(user, otp); err != nil {
 		return err
 	}
@@ -168,7 +170,7 @@ func (s *service) Verify(ctx context.Context, email, otp string) error {
 		"ownerName": user.Username,
 	}
 
-	if user.Role == "business_owner" {
+	if user.Role == "business_owner" && !alreadyExistingUser {
 		err = s.publisher.PublishDomainEvent(ctx, "business_owner.created", event)
 		if err != nil {
 			return fmt.Errorf("failed to publish domain event: %w", err)
@@ -176,7 +178,7 @@ func (s *service) Verify(ctx context.Context, email, otp string) error {
 		logger.L().Info("Published business_owner.created event", zap.String("ownerId", user.ID))
 	}
 
-	if user.Role == "staff" {
+	if user.Role == "staff" && !alreadyExistingUser {
 		event := map[string]any{
 			"user_id": user.ID,
 		}
