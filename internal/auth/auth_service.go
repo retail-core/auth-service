@@ -9,22 +9,24 @@ import (
 
 	"github.com/google/uuid"
 	"github.com/retail-core/auth-service/internal/common"
+	"github.com/retail-core/auth-service/internal/config"
 	"github.com/retail-core/auth-service/internal/dtos"
 	"github.com/retail-core/auth-service/internal/logger"
 	"github.com/retail-core/auth-service/internal/queue"
 	"github.com/retail-core/auth-service/internal/user"
 	"go.uber.org/zap"
+	"golang.org/x/mod/semver"
 )
 
 type service struct {
 	repo      user.Repository
-	secretKey string
+	config    config.Config
 	publisher queue.Publisher
 }
 
-func NewService(jwtSecret string, repo user.Repository, publisher queue.Publisher) Service {
+func NewService(config config.Config, repo user.Repository, publisher queue.Publisher) Service {
 	return &service{
-		secretKey: jwtSecret,
+		config:    config,
 		repo:      repo,
 		publisher: publisher,
 	}
@@ -127,12 +129,12 @@ func (s *service) Login(ctx context.Context, email, password string) (string, st
 		return "", "", user.User{}, common.ErrInvalidLoginCredentials
 	}
 
-	token, err := GenerateJWT(dbUser.ID, dbUser.Role, dbUser.TenantID, dbUser.IsVerified, s.secretKey)
+	token, err := GenerateJWT(dbUser.ID, dbUser.Role, dbUser.TenantID, dbUser.IsVerified, s.config.JWT_SECRET_KEY)
 	if err != nil {
 		return "", "", user.User{}, common.ErrInternal
 	}
 
-	rt, expiresAt, err := GenerateRefreshToken(dbUser.ID, s.secretKey)
+	rt, expiresAt, err := GenerateRefreshToken(dbUser.ID, s.config.JWT_SECRET_KEY)
 	if err != nil {
 		return "", "", user.User{}, err
 	}
@@ -241,12 +243,12 @@ func (s *service) GenerateTokens(ctx context.Context, refreshToken string) (stri
 	}
 
 	// Generate new access and refresh tokens
-	newAccessToken, err := GenerateJWT(user.ID, user.Role, user.TenantID, user.IsVerified, s.secretKey)
+	newAccessToken, err := GenerateJWT(user.ID, user.Role, user.TenantID, user.IsVerified, s.config.JWT_SECRET_KEY)
 	if err != nil {
 		return "", "", err
 	}
 
-	newRefreshToken, expiresAt, err := GenerateRefreshToken(user.ID, s.secretKey)
+	newRefreshToken, expiresAt, err := GenerateRefreshToken(user.ID, s.config.JWT_SECRET_KEY)
 	if err != nil {
 		return "", "", err
 	}
@@ -349,4 +351,23 @@ func (s *service) __publishSendOtpEvent(email, username, otp string) error {
 	}
 
 	return nil
+}
+
+func (s *service) GetAppUpdateCheck(ctx context.Context, platform, version string) (dtos.AppUpdateCheckResponse, error) {
+	v := "v" + version
+	target := "v" + s.config.APP_UPDATE_CHECK_LATEST_VERSION
+
+	if !semver.IsValid(v) || !semver.IsValid(target) {
+		return dtos.AppUpdateCheckResponse{Update: dtos.UpdateNone, }, nil
+	}
+	
+	if semver.Compare(v, target) >= 0 {
+		return dtos.AppUpdateCheckResponse{Update: dtos.UpdateNone}, nil
+	}
+
+	return dtos.AppUpdateCheckResponse{
+		Update:        dtos.UpdateMode(s.config.APP_UPDATE_CHECK_UPDATE),
+		LatestVersion: s.config.APP_UPDATE_CHECK_LATEST_VERSION,
+		UpdateURL:     s.config.APP_UPDATE_CHECK_UPDATE_URL,
+	}, nil
 }

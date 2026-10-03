@@ -192,3 +192,24 @@ func (h *AuthHandler) ResetPassword(w http.ResponseWriter, r *http.Request) {
 	res := map[string]string{"message": "Password reset successful"}
 	WriteJson(w, http.StatusOK, res)
 }
+
+
+func (h *AuthHandler) GetAppUpdateCheck(w http.ResponseWriter, r *http.Request) {
+
+	q := r.URL.Query()
+	platform := q.Get("platform")
+	version := q.Get("version")
+
+	if platform == "" || version == "" {
+		WriteError(w, common.ErrBadRequest)
+		return
+	}
+
+	updateInfo, err := h.service.GetAppUpdateCheck(r.Context(), platform, version)
+	if err != nil {
+		WriteError(w, err)
+		return
+	}
+
+	WriteJson(w, http.StatusOK, updateInfo)
+}

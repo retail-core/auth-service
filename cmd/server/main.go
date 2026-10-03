@@ -40,7 +40,7 @@ func main() {
 	}()
 
 	repo := user.NewPGRepository(query, db)
-	authService := auth.NewService(cfg.JWT_SECRET_KEY, repo, *publisher)
+	authService := auth.NewService(cfg, repo, *publisher)
 	authConsumer := consumer.NewAuthConsumer(publisher.Ch, authService)
 	ctx := context.Background()
 	authConsumer.StartConsumption(ctx)

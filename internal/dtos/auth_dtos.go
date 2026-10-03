@@ -90,6 +90,20 @@ type StaffDeletedEvent struct {
 	UserID  string `json:"user_id"`
 }
 
+type UpdateMode string
+
+const (
+	UpdateNone     UpdateMode = "none"
+	UpdateOptional UpdateMode = "optional"
+	UpdateForced   UpdateMode = "forced"
+)
+
+type AppUpdateCheckResponse struct {
+	Update        UpdateMode `json:"update"`
+	LatestVersion string     `json:"latest_version,omitempty"`
+	UpdateURL     string     `json:"update_url,omitempty"`
+}
+
 func (r *RegisterRequest) Sanitize() {
     r.Email = strings.ToLower(strings.TrimSpace(r.Email))
 }

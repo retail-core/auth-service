@@ -15,7 +15,7 @@ func NewRouter(repo user.Repository, publisher *queue.Publisher) http.Handler {
 	cfg := config.LoadConfig() // remove this guy later already in main
 	router := chi.NewRouter()
 
-	authService := auth.NewService(cfg.JWT_SECRET_KEY, repo, *publisher)
+	authService := auth.NewService(cfg, repo, *publisher)
 	authHandler := NewAuthHandler(authService)
 
 	router.Use(middleware.RequestLogger)
@@ -31,6 +31,7 @@ func NewRouter(repo user.Repository, publisher *queue.Publisher) http.Handler {
 		v1.Post("/resend-otp", authHandler.ResendOTP)
 		v1.Post("/refresh", authHandler.RefreshToken)
 		v1.Post("/reset-password", authHandler.ResetPassword)
+		v1.Get("/app-update-check", authHandler.GetAppUpdateCheck)
 	})
 	return router
 } // and the name

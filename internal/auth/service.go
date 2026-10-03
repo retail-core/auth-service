@@ -15,4 +15,5 @@ type Service interface {
 	GenerateTokens(ctx context.Context, refreshToken string) (newAccessToken string, newRefreshToken string, err error)
 	ResetPassword(ctx context.Context, email, newPassword string) error
 	DeleteUser(ctx context.Context, userID string) error
+	GetAppUpdateCheck(ctx context.Context, platform, version string) (dtos.AppUpdateCheckResponse, error)
 }
